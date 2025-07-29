@@ -184,7 +184,12 @@ if (isDenoDeploy) {
   console.log("Starting bot in webhook mode on Deno Deploy");
 
   // Get the deployment URL automatically
-  const projectName = Deno.env.get("DENO_PROJECT_NAME");
+  const projectName = Deno.env.get("DENO_DEPLOYMENT_ID");
+  console.log(
+    projectName,
+    Deno.env.get("DENO_DEPLOYMENT_ID"),
+    Deno.env.get("DENO_REGION")
+  );
   const webhookUrl = `https://${projectName}.deno.dev/${bot.token}`;
 
   // Set webhook automatically
