@@ -1,5 +1,8 @@
 import "https://deno.land/std@0.224.0/dotenv/load.ts";
-import { Bot } from "https://deno.land/x/grammy@v1.37.0/mod.ts";
+import {
+  Bot,
+  webhookCallback,
+} from "https://deno.land/x/grammy@v1.37.0/mod.ts";
 import { parse } from "https://deno.land/std@0.224.0/csv/mod.ts";
 
 const CSV_URL =
@@ -180,22 +183,22 @@ if (isDenoDeploy) {
   // Webhook mode for Deno Deploy
   console.log("Starting bot in webhook mode on Deno Deploy");
 
-  // Initialize the bot first
-  await bot.init();
+  const handleUpdate = webhookCallback(bot, "std/http");
 
   // Handle webhook updates
   Deno.serve(async (req) => {
     if (req.method === "POST") {
-      try {
-        const update = await req.json();
-        await bot.handleUpdate(update);
-        return new Response("ok");
-      } catch (err) {
-        console.error("Webhook error:", err);
-        return new Response("error", { status: 500 });
+      const url = new URL(req.url);
+      if (url.pathname.slice(1) === bot.token) {
+        try {
+          return await handleUpdate(req);
+        } catch (err) {
+          console.error("Webhook error:", err);
+          return new Response("error", { status: 500 });
+        }
       }
     }
-    return new Response("not found", { status: 404 });
+    return new Response();
   });
 } else {
   // Polling mode for local development
