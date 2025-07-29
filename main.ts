@@ -40,13 +40,55 @@ if (!token) {
 
 const bot = new Bot(token);
 
-bot.command("start", (ctx) => ctx.reply("Welcome to the Extrimism List Bot!"));
+// Logging function
+function logBotAction(
+  action: string,
+  userId?: number,
+  username?: string,
+  chatId?: number,
+  data?: any
+) {
+  const timestamp = new Date().toISOString();
+  const userInfo = userId
+    ? `User: ${username || "Unknown"} (ID: ${userId})`
+    : "Unknown user";
+  const chatInfo = chatId ? `Chat: ${chatId}` : "";
+  const dataInfo = data ? `Data: ${JSON.stringify(data)}` : "";
 
-bot.on("message:text", (ctx) => ctx.reply("You said: " + ctx.message.text));
+  console.log(
+    `[${timestamp}] ${action} - ${userInfo} ${chatInfo} ${dataInfo}`.trim()
+  );
+}
+
+bot.command("start", (ctx) => {
+  const userId = ctx.from?.id;
+  const username = ctx.from?.username;
+  const chatId = ctx.chat?.id;
+
+  logBotAction("START_COMMAND", userId, username, chatId);
+  ctx.reply("Welcome to the Extrimism List Bot!");
+});
+
+bot.on("message:text", (ctx) => {
+  const userId = ctx.from?.id;
+  const username = ctx.from?.username;
+  const chatId = ctx.chat?.id;
+  const messageText = ctx.message.text;
+
+  logBotAction("TEXT_MESSAGE", userId, username, chatId, { text: messageText });
+  ctx.reply("You said: " + ctx.message.text);
+});
 
 // Inline mode: return a random record from the CSV
 bot.on("inline_query", async (ctx) => {
+  const userId = ctx.from?.id;
+  const username = ctx.from?.username;
+  const query = ctx.inlineQuery.query;
+
+  logBotAction("INLINE_QUERY", userId, username, undefined, { query });
+
   if (!csvRecords || !Array.isArray(csvRecords) || csvRecords.length === 0) {
+    logBotAction("INLINE_QUERY_NO_DATA", userId, username);
     return ctx.answerInlineQuery([
       {
         type: "article",
@@ -69,12 +111,24 @@ bot.on("inline_query", async (ctx) => {
       description: "Проверьте свою экстримитскую сущность",
     },
   ]);
+
+  logBotAction("INLINE_QUERY_ANSWERED", userId, username);
 });
 
 // Handle callback query when user selects the option
 bot.on("callback_query", async (ctx) => {
+  const userId = ctx.from?.id;
+  const username = ctx.from?.username;
+  const chatId = ctx.chat?.id;
+  const callbackData = ctx.callbackQuery.data;
+
+  logBotAction("CALLBACK_QUERY", userId, username, chatId, {
+    data: callbackData,
+  });
+
   if (ctx.callbackQuery.data === "get_random_record") {
     if (!csvRecords || !Array.isArray(csvRecords) || csvRecords.length === 0) {
+      logBotAction("CALLBACK_QUERY_NO_DATA", userId, username);
       await ctx.answerCallbackQuery("Данные недоступны");
       return;
     }
@@ -90,6 +144,11 @@ bot.on("callback_query", async (ctx) => {
 
     await ctx.editMessageText(message, { parse_mode: "Markdown" });
     await ctx.answerCallbackQuery();
+
+    logBotAction("RANDOM_RECORD_SENT", userId, username, chatId, {
+      recordIndex: randomIndex,
+      title: title.substring(0, 50) + "...",
+    });
   }
 });
 
