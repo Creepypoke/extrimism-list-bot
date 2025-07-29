@@ -56,15 +56,23 @@ bot.on("inline_query", async (ctx) => {
       },
     ]);
   }
-  const random = csvRecords[Math.floor(Math.random() * csvRecords.length)];
+
+  // Generate a new random record for each query
+  const randomIndex = Math.floor(Math.random() * csvRecords.length);
+  const random = csvRecords[randomIndex];
+
   // Format the record for display
   const title = random["Материал"] || Object.values(random)[0] || "Record";
   const date = random["Дата включения"] || Object.values(random)[1] || "";
   const message = `${title}\nДата включения: ${date}`;
+
+  // Use timestamp to make each result unique
+  const timestamp = Date.now();
+
   await ctx.answerInlineQuery([
     {
       type: "article",
-      id: "random-record",
+      id: `random-record-${timestamp}-${randomIndex}`,
       title: title,
       input_message_content: { message_text: message },
       description: date,
