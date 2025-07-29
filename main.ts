@@ -57,27 +57,40 @@ bot.on("inline_query", async (ctx) => {
     ]);
   }
 
-  // Generate a new random record for each query
-  const randomIndex = Math.floor(Math.random() * csvRecords.length);
-  const random = csvRecords[randomIndex];
-
-  // Format the record for display
-  const title = random["Материал"] || Object.values(random)[0] || "Record";
-  const date = random["Дата включения"] || Object.values(random)[1] || "";
-  const message = `${title}\nДата включения: ${date}`;
-
-  // Use timestamp to make each result unique
-  const timestamp = Date.now();
-
+  // Show only one option with the specified text
   await ctx.answerInlineQuery([
     {
       type: "article",
-      id: `random-record-${timestamp}-${randomIndex}`,
-      title: title,
-      input_message_content: { message_text: message },
-      description: date,
+      id: "extrimism-test",
+      title: "Узнать какой ты экстримитский материал",
+      input_message_content: {
+        message_text: "Нажмите, чтобы узнать какой вы экстримитский материал!",
+      },
+      description: "Проверьте свою экстримитскую сущность",
     },
   ]);
+});
+
+// Handle callback query when user selects the option
+bot.on("callback_query", async (ctx) => {
+  if (ctx.callbackQuery.data === "get_random_record") {
+    if (!csvRecords || !Array.isArray(csvRecords) || csvRecords.length === 0) {
+      await ctx.answerCallbackQuery("Данные недоступны");
+      return;
+    }
+
+    // Generate a new random record
+    const randomIndex = Math.floor(Math.random() * csvRecords.length);
+    const random = csvRecords[randomIndex];
+
+    // Format the record for display
+    const title = random["Материал"] || Object.values(random)[0] || "Record";
+    const date = random["Дата включения"] || Object.values(random)[1] || "";
+    const message = `🎯 **Ваш экстримитский материал:**\n\n${title}\n\n📅 **Дата включения:** ${date}`;
+
+    await ctx.editMessageText(message, { parse_mode: "Markdown" });
+    await ctx.answerCallbackQuery();
+  }
 });
 
 bot.start();
