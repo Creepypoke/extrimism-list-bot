@@ -1,29 +1,37 @@
 import "https://deno.land/std@0.224.0/dotenv/load.ts";
-import { Bot, Context } from "https://deno.land/x/grammy@v1.37.0/mod.ts";
+import { Bot } from "https://deno.land/x/grammy@v1.37.0/mod.ts";
 import { parse } from "https://deno.land/std@0.224.0/csv/mod.ts";
 
-// Parse CSV from root
-async function parseLocalCSV(path: string) {
+const CSV_URL =
+  "https://raw.githubusercontent.com/Creepypoke/extrimism-list-bot/refs/heads/main/list.csv";
+
+// Parse CSV from remote URL
+async function parseRemoteCSV(url: string) {
   try {
-    const csvText = await Deno.readTextFile(path);
-    // const csvText = `Материал;Дата включения
-    // Музыкальный альбом 'Музыка белых', автор - Музыкальная группа Order, решение вынесено Первомайским районным судом г. Омска от 23.11.2006;23.11.2006`;
+    const response = await fetch(url);
+    if (!response.ok)
+      throw new Error(`Failed to fetch CSV: ${response.status}`);
+    const csvText = await response.text();
     const records = await parse(csvText, {
       skipFirstRow: true,
       separator: ";",
     });
     console.log(
-      `Local CSV '${path}' loaded, records count:`,
+      `Remote CSV '${url}' loaded, records count:`,
       Array.isArray(records) ? records.length : Object.keys(records).length
     );
     return records;
-  } catch (e: any) {
-    console.error(`Failed to load local CSV '${path}':`, e.message);
+  } catch (e: unknown) {
+    if (e instanceof Error) {
+      console.error(`Failed to load remote CSV '${url}':`, e.message);
+    } else {
+      console.error(`Failed to load remote CSV '${url}':`, e);
+    }
     return null;
   }
 }
 
-const csvRecords = await parseLocalCSV("list.csv");
+const csvRecords = await parseRemoteCSV(CSV_URL);
 
 const token = Deno.env.get("BOT_TOKEN");
 if (!token) {
