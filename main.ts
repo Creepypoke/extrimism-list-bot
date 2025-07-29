@@ -183,12 +183,33 @@ if (isDenoDeploy) {
   // Webhook mode for Deno Deploy
   console.log("Starting bot in webhook mode on Deno Deploy");
 
+  // Get the deployment URL automatically
+  const projectName = Deno.env.get("DENO_PROJECT_NAME");
+  const webhookUrl = `https://${projectName}.deno.dev/${bot.token}`;
+
+  // Set webhook automatically
+  try {
+    await bot.api.setWebhook(webhookUrl);
+    console.log(`Webhook set to: ${webhookUrl}`);
+  } catch (err) {
+    console.error("Failed to set webhook:", err);
+  }
+
   const handleUpdate = webhookCallback(bot, "std/http");
 
   // Handle webhook updates
   Deno.serve(async (req) => {
+    const url = new URL(req.url);
+
+    // Health check endpoint
+    if (req.method === "GET" && url.pathname === "/") {
+      return new Response("Bot is running! 🤖", {
+        headers: { "Content-Type": "text/plain" },
+      });
+    }
+
+    // Webhook endpoint
     if (req.method === "POST") {
-      const url = new URL(req.url);
       if (url.pathname.slice(1) === bot.token) {
         try {
           return await handleUpdate(req);
@@ -198,7 +219,7 @@ if (isDenoDeploy) {
         }
       }
     }
-    return new Response();
+    return new Response("not found", { status: 404 });
   });
 } else {
   // Polling mode for local development
