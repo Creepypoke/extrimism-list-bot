@@ -180,6 +180,9 @@ if (isDenoDeploy) {
   // Webhook mode for Deno Deploy
   console.log("Starting bot in webhook mode on Deno Deploy");
 
+  // Initialize the bot first
+  await bot.init();
+
   // Handle webhook updates
   Deno.serve(async (req) => {
     if (req.method === "POST") {
