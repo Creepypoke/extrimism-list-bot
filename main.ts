@@ -173,4 +173,29 @@ bot.catch((err) => {
   console.error("Bot error:", err);
 });
 
-bot.start();
+// Check if running on Deno Deploy
+const isDenoDeploy = Deno.env.get("DENO_DEPLOYMENT_ID") !== undefined;
+
+if (isDenoDeploy) {
+  // Webhook mode for Deno Deploy
+  console.log("Starting bot in webhook mode on Deno Deploy");
+
+  // Handle webhook updates
+  Deno.serve(async (req) => {
+    if (req.method === "POST") {
+      try {
+        const update = await req.json();
+        await bot.handleUpdate(update);
+        return new Response("ok");
+      } catch (err) {
+        console.error("Webhook error:", err);
+        return new Response("error", { status: 500 });
+      }
+    }
+    return new Response("not found", { status: 404 });
+  });
+} else {
+  // Polling mode for local development
+  console.log("Starting bot in polling mode locally");
+  bot.start();
+}
