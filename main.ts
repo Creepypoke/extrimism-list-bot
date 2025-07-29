@@ -87,32 +87,48 @@ bot.on("inline_query", async (ctx) => {
 
   logBotAction("INLINE_QUERY", userId, username, undefined, { query });
 
-  if (!csvRecords || !Array.isArray(csvRecords) || csvRecords.length === 0) {
-    logBotAction("INLINE_QUERY_NO_DATA", userId, username);
-    return ctx.answerInlineQuery([
+  // Respond immediately to prevent timeout
+  try {
+    if (!csvRecords || !Array.isArray(csvRecords) || csvRecords.length === 0) {
+      logBotAction("INLINE_QUERY_NO_DATA", userId, username);
+      await ctx.answerInlineQuery([
+        {
+          type: "article",
+          id: "no-data",
+          title: "No data available",
+          input_message_content: { message_text: "No records found in CSV." },
+        },
+      ]);
+      return;
+    }
+
+    // Show only one option with the specified text
+    await ctx.answerInlineQuery([
       {
         type: "article",
-        id: "no-data",
-        title: "No data available",
-        input_message_content: { message_text: "No records found in CSV." },
+        id: "extrimism-test",
+        title: "Узнать какой ты экстримитский материал",
+        input_message_content: {
+          message_text:
+            "Нажмите, чтобы узнать какой вы экстримитский материал!",
+        },
+        description: "Проверьте свою экстримитскую сущность",
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "Узнать", callback_data: "get_random_record" }],
+          ],
+        },
       },
     ]);
+
+    logBotAction("INLINE_QUERY_ANSWERED", userId, username);
+  } catch (error: unknown) {
+    console.error("Inline query error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logBotAction("INLINE_QUERY_ERROR", userId, username, undefined, {
+      error: errorMessage,
+    });
   }
-
-  // Show only one option with the specified text
-  await ctx.answerInlineQuery([
-    {
-      type: "article",
-      id: "extrimism-test",
-      title: "Узнать какой ты экстримитский материал",
-      input_message_content: {
-        message_text: "Нажмите, чтобы узнать какой вы экстримитский материал!",
-      },
-      description: "Проверьте свою экстримитскую сущность",
-    },
-  ]);
-
-  logBotAction("INLINE_QUERY_ANSWERED", userId, username);
 });
 
 // Handle callback query when user selects the option
@@ -150,6 +166,11 @@ bot.on("callback_query", async (ctx) => {
       title: title.substring(0, 50) + "...",
     });
   }
+});
+
+// Add error handling
+bot.catch((err) => {
+  console.error("Bot error:", err);
 });
 
 bot.start();
