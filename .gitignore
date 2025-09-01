@@ -1,3 +1,11 @@
 .DS_Store
 .env
-exportfsm.csv 
+exportfsm.csv
+/.idea/
+/.vscode/
+/node_modules
+*.orig
+*.pyc
+*.swp
+.roo/
+.rooignore

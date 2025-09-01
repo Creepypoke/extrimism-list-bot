@@ -5,6 +5,17 @@ import {
 } from "https://deno.land/x/grammy@v1.37.0/mod.ts";
 import { parse } from "https://deno.land/std@0.224.0/csv/mod.ts";
 
+/**
+ * Masks all URLs in the input string with '[URL REDACTED]'
+ * Matches http/https/ftp/file URLs using a comprehensive regex.
+ */
+function maskUrls(text: string): string {
+  // RFC3986 compliant URL matching pattern (simplified)
+  const urlRegex =
+    /\b((?:https?|ftp|file):\/\/|www\.)[^\s<>()"'`]+[^\s.,:;!?<>()"'`]/gi;
+  return text.replace(urlRegex, "[||ДАННЫЕ УДАЛЕНЫ||]");
+}
+
 const CSV_URL =
   "https://raw.githubusercontent.com/Creepypoke/extrimism-list-bot/refs/heads/main/list.csv";
 
@@ -69,7 +80,7 @@ bot.command("start", (ctx) => {
   const chatId = ctx.chat?.id;
 
   logBotAction("START_COMMAND", userId, username, chatId);
-  ctx.reply("Welcome to the Extrimism List Bot!");
+  ctx.reply(maskUrls("Welcome to the Extrimism List Bot!"));
 });
 
 bot.on("message:text", (ctx) => {
@@ -79,7 +90,7 @@ bot.on("message:text", (ctx) => {
   const messageText = ctx.message.text;
 
   logBotAction("TEXT_MESSAGE", userId, username, chatId, { text: messageText });
-  ctx.reply("You said: " + ctx.message.text);
+  ctx.reply(maskUrls("You said: " + ctx.message.text));
 });
 
 // Inline mode: return a random record from the CSV
@@ -99,7 +110,7 @@ bot.on("inline_query", async (ctx) => {
           type: "article",
           id: "no-data",
           title: "No data available",
-          input_message_content: { message_text: "No records found in CSV." },
+          input_message_content: { message_text: maskUrls("No records found in CSV.") },
         },
       ]);
       return;
@@ -110,12 +121,12 @@ bot.on("inline_query", async (ctx) => {
       {
         type: "article",
         id: "extrimism-test",
-        title: "Узнать какой ты экстримитский материал",
+        title: "Запрещенные экстремистские материалы",
         input_message_content: {
           message_text:
-            "Нажмите, чтобы узнать какой вы экстримитский материал!",
+            maskUrls("Нажмите, чтобы узнать об запрещенном экстремистском материале!"),
         },
-        description: "Проверьте свою экстримитскую сущность",
+        description: "Экстремистский материал дня",
         reply_markup: {
           inline_keyboard: [
             [{ text: "Узнать", callback_data: "get_random_record" }],
@@ -148,7 +159,7 @@ bot.on("callback_query", async (ctx) => {
   if (ctx.callbackQuery.data === "get_random_record") {
     if (!csvRecords || !Array.isArray(csvRecords) || csvRecords.length === 0) {
       logBotAction("CALLBACK_QUERY_NO_DATA", userId, username);
-      await ctx.answerCallbackQuery("Данные недоступны");
+      await ctx.answerCallbackQuery(maskUrls("Данные недоступны"));
       return;
     }
 
@@ -159,9 +170,9 @@ bot.on("callback_query", async (ctx) => {
     // Format the record for display
     const title = random["Материал"] || Object.values(random)[0] || "Record";
     const date = random["Дата включения"] || Object.values(random)[1] || "";
-    const message = `🎯 **Ваш экстримитский материал:**\n\n${title}\n\n📅 **Дата включения:** ${date}`;
+    const message = `💀 **Случайный экстремистский материал:**\n\n${title}\n\n📅 **Дата включения:** ${date}\n\nhttp://pravo.minjust.ru/extremist-materials`;
 
-    await ctx.editMessageText(message, { parse_mode: "Markdown" });
+    await ctx.editMessageText(maskUrls(message), { parse_mode: "Markdown" });
     await ctx.answerCallbackQuery();
 
     logBotAction("RANDOM_RECORD_SENT", userId, username, chatId, {
