@@ -13,7 +13,7 @@ function maskUrls(text: string): string {
   // RFC3986 compliant URL matching pattern (simplified)
   const urlRegex =
     /\b((?:https?|ftp|file):\/\/|www\.)[^\s<>()"'`]+[^\s.,:;!?<>()"'`]/gi;
-  return text.replace(urlRegex, "[||ДАННЫЕ УДАЛЕНЫ||]");
+  return text.replace(urlRegex, "||[ДАННЫЕ УДАЛЕНЫ]||");
 }
 
 const CSV_URL =
@@ -23,8 +23,10 @@ const CSV_URL =
 async function parseRemoteCSV(url: string) {
   try {
     const response = await fetch(url);
-    if (!response.ok)
-      throw new Error(`Failed to fetch CSV: ${response.status}`);
+    if (!response.ok) {
+      console.error(`Failed to fetch CSV: ${response.status}`);
+      return;
+    }
     const csvText = await response.text();
     const records = await parse(csvText, {
       skipFirstRow: true,
@@ -80,7 +82,9 @@ bot.command("start", (ctx) => {
   const chatId = ctx.chat?.id;
 
   logBotAction("START_COMMAND", userId, username, chatId);
-  ctx.reply(maskUrls("Welcome to the Extrimism List Bot!"));
+  ctx.reply(
+    "Welcome to the Extrimism List Bot!"
+  );
 });
 
 bot.on("message:text", (ctx) => {
@@ -90,7 +94,10 @@ bot.on("message:text", (ctx) => {
   const messageText = ctx.message.text;
 
   logBotAction("TEXT_MESSAGE", userId, username, chatId, { text: messageText });
-  ctx.reply(maskUrls("You said: " + ctx.message.text));
+  ctx.reply(
+    maskUrls("You said: " + ctx.message.text),
+    { parse_mode: "MarkdownV2" }
+  );
 });
 
 // Inline mode: return a random record from the CSV
@@ -123,8 +130,7 @@ bot.on("inline_query", async (ctx) => {
         id: "extrimism-test",
         title: "Запрещенные экстремистские материалы",
         input_message_content: {
-          message_text:
-            maskUrls("Нажмите, чтобы узнать об запрещенном экстремистском материале!"),
+          message_text: "Нажмите, чтобы узнать о запрещенном экстремистском материале!",
         },
         description: "Экстремистский материал дня",
         reply_markup: {
@@ -159,7 +165,7 @@ bot.on("callback_query", async (ctx) => {
   if (ctx.callbackQuery.data === "get_random_record") {
     if (!csvRecords || !Array.isArray(csvRecords) || csvRecords.length === 0) {
       logBotAction("CALLBACK_QUERY_NO_DATA", userId, username);
-      await ctx.answerCallbackQuery(maskUrls("Данные недоступны"));
+      await ctx.answerCallbackQuery("Данные недоступны");
       return;
     }
 
@@ -170,9 +176,12 @@ bot.on("callback_query", async (ctx) => {
     // Format the record for display
     const title = random["Материал"] || Object.values(random)[0] || "Record";
     const date = random["Дата включения"] || Object.values(random)[1] || "";
-    const message = `💀 **Случайный экстремистский материал:**\n\n${title}\n\n📅 **Дата включения:** ${date}\n\nhttp://pravo.minjust.ru/extremist-materials`;
+    const message = `💀 **Случайный экстремистский материал:**\n\n${maskUrls(title)}\n\n📅 **Дата включения:** ${date}\n\nИсточник: https://minjust.gov.ru/ru/extremist-materials`;
 
-    await ctx.editMessageText(maskUrls(message), { parse_mode: "Markdown" });
+    await ctx.editMessageText(
+      message,
+      { parse_mode: "MarkdownV2" }
+    );
     await ctx.answerCallbackQuery();
 
     logBotAction("RANDOM_RECORD_SENT", userId, username, chatId, {
