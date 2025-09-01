@@ -6,17 +6,6 @@ import {
 import { parse } from "https://deno.land/std@0.224.0/csv/mod.ts";
 
 /**
- * Properly escape all MarkdownV2 special characters in text.
- * See: https://core.telegram.org/bots/api#markdownv2-style
- */
-function escapeMarkdownV2(text: string): string {
-  return text.replace(
-    /[_*[\]()~`>#+\-=|{}.!\\]/g,
-    "\\$&"
-  );
-}
-
-/**
  * Masks all URLs in the input string with '[URL REDACTED]'
  * Matches http/https/ftp/file URLs using a comprehensive regex.
  */
@@ -24,7 +13,7 @@ function maskUrls(text: string): string {
   // RFC3986 compliant URL matching pattern (simplified)
   const urlRegex =
     /\b((?:https?|ftp|file):\/\/|www\.)[^\s<>()"'`]+[^\s.,:;!?<>()"'`]/gi;
-  return text.replace(urlRegex, "||[ДАННЫЕ УДАЛЕНЫ]||");
+  return text.replace(urlRegex, "[ДАННЫЕ УДАЛЕНЫ]");
 }
 
 const CSV_URL =
@@ -106,8 +95,8 @@ bot.on("message:text", (ctx) => {
 
   logBotAction("TEXT_MESSAGE", userId, username, chatId, { text: messageText });
   ctx.reply(
-    maskUrls("You said: " + escapeMarkdownV2(ctx.message.text)),
-    { parse_mode: "MarkdownV2" }
+    maskUrls("You said: " + ctx.message.text),
+    { parse_mode: "Markdown" }
   );
 });
 
@@ -190,8 +179,8 @@ bot.on("callback_query", async (ctx) => {
     const message = `💀 **Случайный экстремистский материал:**\n\n${maskUrls(title)}\n\n📅 **Дата включения:** ${date}\n\nИсточник: https://minjust.gov.ru/ru/extremist-materials`;
 
     await ctx.editMessageText(
-      escapeMarkdownV2(message),
-      { parse_mode: "MarkdownV2" }
+      message,
+      { parse_mode: "Markdown" }
     );
     await ctx.answerCallbackQuery();
 
