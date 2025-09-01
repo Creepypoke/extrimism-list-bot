@@ -187,12 +187,10 @@ bot.on("callback_query", async (ctx) => {
     // Format the record for display
     const title = random["Материал"] || Object.values(random)[0] || "Record";
     const date = random["Дата включения"] || Object.values(random)[1] || "";
-    const titleEscaped = escapeMarkdownV2(title);
-    const dateEscaped = escapeMarkdownV2(date);
-    const message = `💀 **Случайный экстремистский материал:**\n\n${maskUrls(titleEscaped)}\n\n📅 **Дата включения:** ${dateEscaped}\n\nИсточник: https://minjust.gov.ru/ru/extremist-materials`;
+    const message = `💀 **Случайный экстремистский материал:**\n\n${maskUrls(title)}\n\n📅 **Дата включения:** ${date}\n\nИсточник: https://minjust.gov.ru/ru/extremist-materials`;
 
     await ctx.editMessageText(
-      message,
+      escapeMarkdownV2(message),
       { parse_mode: "MarkdownV2" }
     );
     await ctx.answerCallbackQuery();
