@@ -24,7 +24,7 @@ async function parseRemoteCSV(url: string) {
   try {
     const response = await fetch(url);
     if (!response.ok) {
-      console.error(`Failed to fetch CSV: ${response.status}`);
+      await Logger.error(`Failed to fetch CSV: ${response.status}`);
       return;
     }
     const csvText = await response.text();
@@ -32,16 +32,16 @@ async function parseRemoteCSV(url: string) {
       skipFirstRow: true,
       separator: ";",
     });
-    console.log(
+    await Logger.info(
       `Remote CSV '${url}' loaded, records count:`,
       Array.isArray(records) ? records.length : Object.keys(records).length
     );
     return records;
   } catch (e: unknown) {
     if (e instanceof Error) {
-      console.error(`Failed to load remote CSV '${url}':`, e.message);
+      await Logger.error(`Failed to load remote CSV '${url}':`, e.message);
     } else {
-      console.error(`Failed to load remote CSV '${url}':`, e);
+      await Logger.error(`Failed to load remote CSV '${url}':`, e);
     }
     return null;
   }
@@ -56,8 +56,28 @@ if (!token) {
 
 const bot = new Bot(token);
 
+/**
+ * Simple Logger that explicitly outputs to stdout.
+ * All logging is routed via Logger for consistency and testability.
+ */
+class Logger {
+  static async info(...args: unknown[]) {
+    const msg = args.map(String).join(" ");
+    await Deno.stdout.write(
+      new TextEncoder().encode(msg + "\n")
+    );
+  }
+  static async error(...args: unknown[]) {
+    const msg = args.map(String).join(" ");
+    // Still output to stdout to comply with requirements (not stderr).
+    await Deno.stdout.write(
+      new TextEncoder().encode("ERROR: " + msg + "\n")
+    );
+  }
+}
+
 // Logging function
-function logBotAction(
+async function logBotAction(
   action: string,
   userId?: number,
   username?: string,
@@ -71,7 +91,7 @@ function logBotAction(
   const chatInfo = chatId ? `Chat: ${chatId}` : "";
   const dataInfo = data ? `Data: ${JSON.stringify(data)}` : "";
 
-  console.log(
+  await Logger.info(
     `[${timestamp}] ${action} - ${userInfo} ${chatInfo} ${dataInfo}`.trim()
   );
 }
@@ -143,9 +163,9 @@ bot.on("inline_query", async (ctx) => {
 
     logBotAction("INLINE_QUERY_ANSWERED", userId, username);
   } catch (error: unknown) {
-    console.error("Inline query error:", error);
+    await Logger.error("Inline query error:", error);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logBotAction("INLINE_QUERY_ERROR", userId, username, undefined, {
+    await logBotAction("INLINE_QUERY_ERROR", userId, username, undefined, {
       error: errorMessage,
     });
   }
@@ -193,7 +213,7 @@ bot.on("callback_query", async (ctx) => {
 
 // Add error handling
 bot.catch((err) => {
-  console.error("Bot error:", err);
+  Logger.error("Bot error:", err);
 });
 
 // Check if running on Deno Deploy
@@ -201,7 +221,7 @@ const isDenoDeploy = Deno.env.get("DENO_DEPLOYMENT_ID") !== undefined;
 
 if (isDenoDeploy) {
   // Webhook mode for Deno Deploy
-  console.log("Starting bot in webhook mode on Deno Deploy");
+  await Logger.info("Starting bot in webhook mode on Deno Deploy");
 
   // Get the deployment URL automatically
   const projectName = Deno.env.get("PROJECT_NAME");
@@ -210,9 +230,9 @@ if (isDenoDeploy) {
   // Set webhook automatically
   try {
     await bot.api.setWebhook(webhookUrl);
-    console.log(`Webhook set to: ${webhookUrl}`);
+    await Logger.info(`Webhook set to: ${webhookUrl}`);
   } catch (err) {
-    console.error("Failed to set webhook:", err);
+    await Logger.error("Failed to set webhook:", err);
   }
 
   const handleUpdate = webhookCallback(bot, "std/http");
@@ -234,7 +254,7 @@ if (isDenoDeploy) {
         try {
           return await handleUpdate(req);
         } catch (err) {
-          console.error("Webhook error:", err);
+          await Logger.error("Webhook error:", err);
           return new Response("error", { status: 500 });
         }
       }
@@ -243,6 +263,6 @@ if (isDenoDeploy) {
   });
 } else {
   // Polling mode for local development
-  console.log("Starting bot in polling mode locally");
+  await Logger.info("Starting bot in polling mode locally");
   bot.start();
 }
